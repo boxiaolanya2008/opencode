@@ -1,0 +1,30 @@
+Edit files using anchor-based operations. You provide short snippets (anchors) to locate where to edit, not full original text.
+
+Usage:
+- You MUST use the Read tool first. This tool errors if you haven't read the file.
+- Each op has an `anchor`: a short snippet that uniquely identifies a line in the file. The anchor is matched against lines (trimmed, substring match). It does NOT need to be the full line, just enough to be unique.
+- Operations are applied sequentially; each op sees the result of the previous one.
+- If ANY op fails (anchor not found or ambiguous), NO changes are written. The file stays untouched.
+
+Operations:
+- insert: put `content` before or after the line matched by `anchor`.
+- replace: replace the matched line(s) with `content`.
+- delete: remove the matched line(s). Use `endAnchor` to delete a range from `anchor` to `endAnchor` (inclusive).
+
+Anchor tips:
+- Good: `function foo()`, `const result =`, `export class Bar` — short, unique enough.
+- Bad: `foo` (too short, likely matches many places), or pasting the entire function body (defeats the purpose).
+- If an anchor matches multiple places, the tool errors and asks for a more unique snippet. Add surrounding context to the anchor.
+- For regex matching, prefix with `re:` (e.g. `re:^\\s*export function foo`).
+
+Examples:
+- Insert a new function after an existing one:
+  {"op":"insert","anchor":"export function greet()","position":"after","content":"\\nexport function bye() {\\n  console.log('bye')\\n}"}
+- Replace a line:
+  {"op":"replace","anchor":"const x = 1","content":"const x = 2"}
+- Delete a block from `function old()` to its closing brace line:
+  {"op":"delete","anchor":"function old()","endAnchor":"}"}
+- Batch multiple ops in one call (applied in order):
+  {"filePath":"/abs/path.ts","ops":[{"op":"replace","anchor":"const x = 1","content":"const x = 2"},{"op":"insert","anchor":"const x = 2","position":"after","content":"const y = 3"}]}
+
+Use `write` for creating new files or full rewrites. Prefer `code_edit` for targeted changes.
