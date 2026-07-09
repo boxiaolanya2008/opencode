@@ -32,3 +32,12 @@ UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+
+#mimo code
+.mimocode/
+
+#opencode
+.opencode/
+
+#zed-ide
+.zed/
