@@ -108,7 +108,6 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
             <Show when={stats()}>
               {(st) => (
                 <box flexShrink={0} gap={0} paddingTop={1}>
-                  <text fg={theme.textMuted}>{"─".repeat(38)}</text>
                   <box flexGrow={1} flexDirection="row" justifyContent="space-between">
                     <text fg={theme.textMuted}>Tokens</text>
                     <text fg={theme.text}>{formatTokenCount(st().totalTokens)}</text>
