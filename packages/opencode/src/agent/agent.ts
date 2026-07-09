@@ -14,6 +14,8 @@ import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
+import PROMPT_DEFAULT from "@/session/prompt/default.txt"
+import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@opencode-ai/core/global"
@@ -141,6 +143,7 @@ const layer = Layer.effect(
           build: {
             name: "build",
             description: "The default agent. Executes tools based on configured permissions.",
+            prompt: PROMPT_DEFAULT,
             options: {},
             permission: Permission.merge(
               defaults,
@@ -156,6 +159,7 @@ const layer = Layer.effect(
           plan: {
             name: "plan",
             description: "Plan mode. Disallows all edit tools.",
+            prompt: PROMPT_PLAN,
             options: {},
             permission: Permission.merge(
               defaults,

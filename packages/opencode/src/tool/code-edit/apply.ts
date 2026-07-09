@@ -12,7 +12,7 @@ export class OpError extends Error {
   constructor(
     message: string,
     readonly index: number,
-    readonly cause?: unknown,
+    override readonly cause?: unknown,
   ) {
     super(`op[${index}]: ${message}`)
     this.name = "OpError"

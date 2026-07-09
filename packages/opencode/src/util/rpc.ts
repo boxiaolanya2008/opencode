@@ -49,6 +49,7 @@ export function emit(event: string, data: unknown) {
 export function client<T extends Definition>(target: {
   postMessage: (data: string) => void | null
   onmessage: ((this: Worker, ev: MessageEvent<any>) => any) | null
+  onerror?: ((this: AbstractWorker, ev: ErrorEvent) => any) | null
 }) {
   const pending = new Map<number, { resolve: (result: any) => void; reject: (error: Error) => void }>()
   const listeners = new Map<string, Set<(data: any) => void>>()

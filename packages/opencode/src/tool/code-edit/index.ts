@@ -54,7 +54,7 @@ export const Parameters = Schema.Struct({
           description:
             "A short snippet that uniquely identifies where to insert. Matched against file lines (trimmed, contains). Must be unique in the file.",
         }),
-        position: Schema.Literal("before", "after").annotate({
+        position: Schema.Literals(["before", "after"]).annotate({
           description: "Insert before or after the matched anchor line(s).",
         }),
         content: Schema.String.annotate({
@@ -174,15 +174,17 @@ export const CodeEditTool = Tool.define(
             }).pipe(Effect.orDie),
           )
 
+          let additions = 0
+          let deletions = 0
+          for (const change of diffLines(contentOld, contentNew)) {
+            if (change.added) additions += change.count || 0
+            if (change.removed) deletions += change.count || 0
+          }
           const filediff: Snapshot.FileDiff = {
             file: filePath,
             patch: diff,
-            additions: 0,
-            deletions: 0,
-          }
-          for (const change of diffLines(contentOld, contentNew)) {
-            if (change.added) filediff.additions += change.count || 0
-            if (change.removed) filediff.deletions += change.count || 0
+            additions,
+            deletions,
           }
 
           yield* ctx.metadata({
