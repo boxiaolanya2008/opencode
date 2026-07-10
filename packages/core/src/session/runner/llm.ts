@@ -28,6 +28,7 @@ import { SessionContextEpoch } from "../context-epoch"
 import { SessionCompaction } from "../compaction"
 import { SessionEvent } from "../event"
 import { SessionHistory } from "../history"
+import { Hash } from "../../util/hash"
 import { SessionInput } from "../input"
 import { SessionSchema } from "../schema"
 import { SessionStore } from "../store"
@@ -201,10 +202,18 @@ const layer = Layer.effect(
       const context = entries.map((entry) => entry.message)
       const isLastStep = agent.info?.steps !== undefined && currentStep >= agent.info.steps
       const toolMaterialization = isLastStep ? undefined : yield* tools.materialize(agent.info?.permissions)
-      const promptCacheKey = /^ses_[0-9a-f]{64}$/.test(session.id) ? session.id.slice(4) : session.id
+const promptCacheKey = session.parentID
+        ? Hash.sha256(`${session.parentID}:${model.provider}:${model.id}:${agent.id}`)
+        : /^ses_[0-9a-f]{64}$/.test(session.id)
+          ? session.id.slice(4)
+          : session.id
+      const providerOptions = {
+        openai: { promptCacheKey, safetyIdentifier: promptCacheKey },
+        [model.provider]: { promptCacheKey },
+      }
       const request = LLM.request({
         model,
-        providerOptions: { openai: { promptCacheKey } },
+        providerOptions,
         system: [agent.info?.system, system.baseline]
           .filter((part): part is string => part !== undefined && part.length > 0)
           .map(SystemPart.make),
