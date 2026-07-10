@@ -67,6 +67,13 @@ const layer = Layer.effect(
       const bridge = yield* EffectBridge.make()
       const commands: Record<string, Info> = {}
 
+commands["effect"] = {
+        name: "effect",
+        description: "set reasoning effort: low, medium, or high",
+        source: "command",
+        template: "",
+        hints: [],
+      }
       commands[Default.INIT] = {
         name: Default.INIT,
         description: "guided AGENTS.md setup",

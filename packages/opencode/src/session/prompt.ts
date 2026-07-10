@@ -1360,6 +1360,28 @@ const layer = Layer.effect(
         agent: input.agent,
       })
       const cmd = yield* commands.get(input.command)
+      if (input.command === "effect") {
+        const value = input.arguments.trim().toLowerCase()
+        const allowed = new Set(["low", "medium", "high"])
+        if (!allowed.has(value)) {
+          const error = new NamedError.Unknown({ message: "Usage: /effect low|medium|high" })
+          yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
+        if (!session.model) {
+          const error = new NamedError.Unknown({ message: "Cannot set effect before a model is selected" })
+          yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        yield* sessions.setAgentModel({
+          sessionID: input.sessionID,
+          agent: session.agent ?? input.agent ?? "build",
+          model: { ...session.model, variant: value },
+          time: Date.now(),
+        })
+return yield* lastAssistant(input.sessionID).pipe(Effect.orDie)
+      }
       if (!cmd) {
         const available = (yield* commands.list()).map((c) => c.name)
         const hint = available.length ? ` Available commands: ${available.join(", ")}` : ""
