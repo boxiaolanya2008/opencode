@@ -19,6 +19,7 @@ import type { ToolPart } from "@opencode-ai/sdk/v2"
 import type * as Tool from "@/tool/tool"
 import type { ApplyPatchTool } from "@/tool/apply_patch"
 import type { ShellTool as BashTool } from "@/tool/shell"
+import type { CodeEditTool } from "@/tool/code-edit"
 import type { EditTool } from "@/tool/edit"
 import type { GlobTool } from "@/tool/glob"
 import type { GrepTool } from "@/tool/grep"
@@ -94,8 +95,9 @@ type ToolPermissionCtx = {
 type ToolDefs = {
   invalid: typeof InvalidTool
   bash: typeof BashTool
-  write: typeof WriteTool
+write: typeof WriteTool
   edit: typeof EditTool
+  code_edit: typeof CodeEditTool
   apply_patch: typeof ApplyPatchTool
   batch: Tool.Info
   task: typeof TaskTool
@@ -355,6 +357,15 @@ function runEdit(p: ToolProps<typeof EditTool>): ToolInline {
   }
 }
 
+function runCodeEdit(p: ToolProps<typeof CodeEditTool>): ToolInline {
+  return {
+    icon: "←",
+    title: `Edit ${toolPath(p.input.filePath)}`,
+    mode: "block",
+    body: p.metadata.diff,
+  }
+}
+
 function runWebSearch(p: ToolProps<typeof WebSearchTool>): ToolInline {
   const title = webSearchProviderLabel(p.metadata.provider)
   return {
@@ -513,6 +524,25 @@ function snapWrite(p: ToolProps<typeof WriteTool>): ToolSnapshot | undefined {
 }
 
 function snapEdit(p: ToolProps<typeof EditTool>): ToolSnapshot | undefined {
+  const file = p.input.filePath || ""
+  const diff = p.metadata.diff || ""
+  if (!file || !diff.trim()) {
+    return undefined
+  }
+
+  return {
+    kind: "diff",
+    items: [
+      {
+        title: `# Edited ${toolPath(file)}`,
+        diff,
+        file,
+      },
+    ],
+  }
+}
+
+function snapCodeEdit(p: ToolProps<typeof CodeEditTool>): ToolSnapshot | undefined {
   const file = p.input.filePath || ""
   const diff = p.metadata.diff || ""
   if (!file || !diff.trim()) {
@@ -696,6 +726,10 @@ function scrollWriteStart(_: ToolProps<typeof WriteTool>): string {
 }
 
 function scrollEditStart(_: ToolProps<typeof EditTool>): string {
+  return ""
+}
+
+function scrollCodeEditStart(_: ToolProps<typeof CodeEditTool>): string {
   return ""
 }
 
@@ -929,6 +963,18 @@ function permEdit(p: ToolPermissionProps<typeof EditTool>): ToolPermissionInfo {
   }
 }
 
+function permCodeEdit(p: ToolPermissionProps<typeof CodeEditTool>): ToolPermissionInfo {
+  const input = p.input as { filePath?: string; diff?: string }
+  const file = input.filePath || p.patterns[0] || ""
+  return {
+    icon: "→",
+    title: `Edit ${toolPath(file, { home: true })}`,
+    lines: [],
+    diff: p.metadata.diff ?? input.diff,
+    file,
+  }
+}
+
 function permRead(p: ToolPermissionProps<typeof ReadTool>): ToolPermissionInfo {
   const file = p.input.filePath || p.patterns[0] || ""
   return {
@@ -1055,7 +1101,7 @@ const TOOL_RULES = {
       start: scrollWriteStart,
     },
   },
-  edit: {
+edit: {
     view: {
       output: false,
       final: true,
@@ -1067,6 +1113,19 @@ const TOOL_RULES = {
       start: scrollEditStart,
     },
     permission: permEdit,
+  },
+  code_edit: {
+    view: {
+      output: false,
+      final: true,
+      snap: "diff",
+    },
+    run: runCodeEdit,
+    snap: snapCodeEdit,
+    scroll: {
+      start: scrollCodeEditStart,
+    },
+    permission: permCodeEdit,
   },
   apply_patch: {
     view: {
