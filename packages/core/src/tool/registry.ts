@@ -103,7 +103,7 @@ const registryLayer = Layer.effect(
           }),
         )
       }),
-      materialize: Effect.fn("ToolRegistry.materialize")(function* (permissions = []) {
+materialize: Effect.fn("ToolRegistry.materialize")(function* (permissions = []) {
         const registrations = new Map(applications.entries())
         for (const [name, entries] of local) {
           const registration = entries.at(-1)?.registration
@@ -111,8 +111,9 @@ const registryLayer = Layer.effect(
         }
         for (const [name, registration] of registrations)
           if (whollyDisabled(permission(registration.tool, name), permissions)) registrations.delete(name)
+        const sortedNames = [...registrations.keys()].sort()
         return {
-          definitions: Array.from(registrations, ([name, registration]) => definition(name, registration.tool)),
+          definitions: sortedNames.map((name) => definition(name, registrations.get(name)!.tool)),
           settle: (input) => {
             const registration = registrations.get(input.call.name)
             if (registration) return settleWith(input, registration.identity)

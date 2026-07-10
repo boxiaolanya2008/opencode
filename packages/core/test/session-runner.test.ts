@@ -646,7 +646,7 @@ describe("SessionRunnerLLM", () => {
 
       expect(requests).toHaveLength(1)
       expect(requests[0]?.model).toBe(model)
-      expect(requests[0]?.tools.map((tool) => tool.name)).toEqual(["echo", "defect"])
+      expect(requests[0]?.tools.map((tool) => tool.name)).toEqual(["defect", "echo"])
       expect(requests[0]?.messages.map((message) => ({ role: message.role, content: message.content }))).toEqual([
         { role: "user", content: [{ type: "text", text: "First" }] },
         { role: "user", content: [{ type: "text", text: "Second" }] },
@@ -1365,7 +1365,7 @@ describe("SessionRunnerLLM", () => {
       yield* session.resume(sessionID)
 
       expect(requests).toHaveLength(1)
-      expect(requests[0]?.tools.map((tool) => tool.name)).toEqual(["echo", "defect"])
+      expect(requests[0]?.tools.map((tool) => tool.name)).toEqual(["defect", "echo"])
       expect(yield* session.context(sessionID)).toMatchObject([
         { type: "user", text: "Use tools" },
         {

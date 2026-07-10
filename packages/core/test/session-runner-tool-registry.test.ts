@@ -72,11 +72,11 @@ describe("ToolRegistry", () => {
       const names = (rules: Parameters<ToolRegistry.Interface["materialize"]>[0]) =>
         toolDefinitions(service, rules).pipe(Effect.map((definitions) => definitions.map((tool) => tool.name)))
 
-      expect(yield* names([{ action: "question", resource: "*", effect: "deny" }])).toEqual([
+expect(yield* names([{ action: "question", resource: "*", effect: "deny" }])).toEqual([
+        "apply_patch",
         "bash",
         "edit",
         "write",
-        "apply_patch",
       ])
       expect(
         yield* names([
@@ -90,7 +90,7 @@ describe("ToolRegistry", () => {
           { action: "*", resource: "*", effect: "deny" },
         ]),
       ).toEqual([])
-      expect(yield* names([{ action: "edit", resource: "*", effect: "deny" }])).toEqual(["question", "bash"])
+expect(yield* names([{ action: "edit", resource: "*", effect: "deny" }])).toEqual(["bash", "question"])
     }),
   )
 
@@ -110,7 +110,7 @@ describe("ToolRegistry", () => {
     }),
   )
 
-  it.effect("reuses model definitions across provider turns", () =>
+it.effect("reuses model definitions across provider turns", () =>
     Effect.gen(function* () {
       const service = yield* ToolRegistry.Service
       yield* service.register({ echo: make() })
@@ -118,6 +118,34 @@ describe("ToolRegistry", () => {
       const second = yield* toolDefinitions(service)
 
       expect(second[0]).toBe(first[0])
+    }),
+  )
+
+  it.effect("returns tool definitions in deterministic alphabetical order for prompt-cache stability", () =>
+    Effect.gen(function* () {
+      const service = yield* ToolRegistry.Service
+      yield* service.register({
+        zeta: make(),
+        alpha: make(),
+        mike: make(),
+      })
+      const scope = yield* Scope.make()
+      yield* service
+        .register({
+          bravo: make(),
+          yankee: make(),
+        })
+        .pipe(Scope.provide(scope))
+      const names = (yield* toolDefinitions(service)).map((definition) => definition.name)
+
+      expect(names).toEqual(["alpha", "bravo", "mike", "yankee", "zeta"])
+
+      yield* Scope.close(scope, Exit.void)
+      expect((yield* toolDefinitions(service)).map((definition) => definition.name)).toEqual([
+        "alpha",
+        "mike",
+        "zeta",
+      ])
     }),
   )
 
