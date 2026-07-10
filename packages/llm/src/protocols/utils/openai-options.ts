@@ -75,6 +75,11 @@ export const promptCacheKey = (request: LLMRequest) => {
   return typeof value === "string" ? value : undefined
 }
 
+export const safetyIdentifier = (request: LLMRequest) => {
+  const value = options(request)?.safetyIdentifier
+  return typeof value === "string" ? value : undefined
+}
+
 export const textVerbosity = (request: LLMRequest) => {
   const value = options(request)?.textVerbosity
   return isTextVerbosity(value) ? value : undefined

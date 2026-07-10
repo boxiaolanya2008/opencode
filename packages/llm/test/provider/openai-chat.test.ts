@@ -29,7 +29,7 @@ const request = LLM.request({
 })
 
 describe("OpenAI Chat route", () => {
-  it.effect("prepares OpenAI Chat payload", () =>
+it.effect("prepares OpenAI Chat payload", () =>
     Effect.gen(function* () {
       // Pass the OpenAIChat payload type so `prepared.body` is statically
       // typed to the route's native shape — the assertions below read field
@@ -48,6 +48,25 @@ describe("OpenAI Chat route", () => {
         max_tokens: 20,
         temperature: 0,
       })
+    }),
+  )
+
+  it.effect("forwards prompt_cache_key from providerOptions.openai", () =>
+    Effect.gen(function* () {
+      const cached = LLM.updateRequest(request, {
+        providerOptions: { openai: { promptCacheKey: "ses_test_cache_key" } },
+      })
+      const prepared = yield* LLMClient.prepare<OpenAIChat.OpenAIChatBody>(cached)
+
+      expect(prepared.body.prompt_cache_key).toBe("ses_test_cache_key")
+    }),
+  )
+
+  it.effect("omits prompt_cache_key when not configured", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare<OpenAIChat.OpenAIChatBody>(request)
+
+      expect("prompt_cache_key" in prepared.body).toBe(false)
     }),
   )
 
