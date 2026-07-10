@@ -19,7 +19,11 @@ set "BIN_NAME=opencode.exe"
 
 echo [1/4] Building opencode (single binary)...
 cd /d "%REPO_DIR%\packages\opencode"
-set "OPENCODE_VERSION=2.0.0"
+for /f "usebackq tokens=*" %%v in (`powershell -NoProfile -Command "(Get-Content '%REPO_DIR%packages\opencode\package.json' | ConvertFrom-Json).version"`) do set "OPENCODE_VERSION=%%v"
+if "%OPENCODE_VERSION%"=="" (
+    echo [ERROR] Could not read version from packages\opencode\package.json
+    exit /b 1
+)
 call bun run build --single
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed.
