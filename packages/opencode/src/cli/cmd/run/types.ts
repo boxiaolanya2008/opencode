@@ -185,6 +185,14 @@ export type FooterPromptRoute =
   | { type: "model" }
   | { type: "variant" }
 
+export type FooterSubagentTokens = {
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
+  lastMessageID?: string
+}
+
 export type FooterSubagentTab = {
   sessionID: string
   partID: string
@@ -195,6 +203,7 @@ export type FooterSubagentTab = {
   background?: boolean
   title?: string
   toolCalls?: number
+  tokens?: FooterSubagentTokens
   lastUpdatedAt: number
 }
 

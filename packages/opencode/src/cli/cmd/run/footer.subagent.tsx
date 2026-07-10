@@ -4,6 +4,7 @@ import { useKeyboard } from "@opentui/solid"
 import { registerOpencodeSpinner } from "@opencode-ai/tui/component/register-spinner"
 import { Show, createMemo, indexArray } from "solid-js"
 import { SPINNER_FRAMES } from "@opencode-ai/tui/component/spinner"
+import * as Locale from "@/util/locale"
 import { RunEntryContent, separatorRows } from "./scrollback.writer"
 import type { FooterSubagentDetail, FooterSubagentTab, RunDiffStyle } from "./types"
 import type { RunFooterTheme, RunTheme } from "./theme"
@@ -75,13 +76,22 @@ export function RunFooterSubagentBody(props: {
 
     return current.description || current.title || current.label
   })
-  const subtitle = createMemo(() => {
+const subtitle = createMemo(() => {
     const current = tab()
     if (!current || title() === current.label) {
       return ""
     }
 
     return current.label
+  })
+  const cacheSummary = createMemo(() => {
+    const current = tab()
+    if (!current?.tokens) return ""
+    const t = current.tokens
+    const total = t.cacheRead + t.cacheWrite
+    if (total === 0) return ""
+    const hit = Math.round((t.cacheRead / total) * 100)
+    return `cache ${hit}% · ${Locale.number(t.input)} in / ${Locale.number(t.output)} out`
   })
   const rows = indexArray(commits, (commit, index) => (
     <box flexDirection="column" gap={0} flexShrink={0}>
@@ -137,8 +147,11 @@ export function RunFooterSubagentBody(props: {
               )}
               <text fg={footer().text} wrapMode="none" truncate flexGrow={1} flexShrink={1}>
                 {title()}
-                <Show when={subtitle().length > 0}>
-                  <span style={{ fg: footer().muted }}>{"  " + subtitle()}</span>
+<Show when={subtitle().length > 0 || cacheSummary().length > 0}>
+                  <span style={{ fg: footer().muted }}>
+                    {cacheSummary().length > 0 ? `${cacheSummary()} · ` : ""}
+                    {subtitle()}
+                  </span>
                 </Show>
               </text>
               <Show when={props.total() > 1 && props.index() > 0}>

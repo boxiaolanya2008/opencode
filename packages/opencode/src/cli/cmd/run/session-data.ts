@@ -82,10 +82,17 @@ export type SessionData = {
   msg: Map<string, string>
   part: Map<string, PartKind>
   text: Map<string, string>
-  sent: Map<string, number>
+sent: Map<string, number>
   visible: Map<string, string>
   end: Set<string>
   echo: Map<string, Set<string>>
+  tokens: {
+    input: number
+    output: number
+    cacheRead: number
+    cacheWrite: number
+    lastMessageID?: string
+  }
 }
 
 export type SessionDataInput = {
@@ -120,10 +127,11 @@ export function createSessionData(
     msg: new Map(),
     part: new Map(),
     text: new Map(),
-    sent: new Map(),
+sent: new Map(),
     visible: new Map(),
     end: new Set(),
     echo: new Map(),
+    tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   }
 }
 
@@ -136,12 +144,14 @@ function formatUsage(
   limit: number | undefined,
   cost: number | undefined,
 ): string | undefined {
+  const read = tokens?.cache?.read ?? 0
+  const write = tokens?.cache?.write ?? 0
   const total =
     (tokens?.input ?? 0) +
     (tokens?.output ?? 0) +
     (tokens?.reasoning ?? 0) +
-    (tokens?.cache?.read ?? 0) +
-    (tokens?.cache?.write ?? 0)
+    read +
+    write
 
   if (total <= 0) {
     if (typeof cost === "number" && cost > 0) {
@@ -150,9 +160,12 @@ function formatUsage(
     return undefined
   }
 
-  const text =
+  const ratio = read + write > 0 ? read / (read + write) : 0
+  const hit = ratio > 0 ? `${Math.round(ratio * 100)}%` : "–"
+  const base =
     limit && limit > 0 ? `${Locale.number(total)} (${Math.round((total / limit) * 100)}%)` : Locale.number(total)
 
+  const text = `${base} · cache ${hit}`
   if (typeof cost === "number" && cost > 0) {
     return `${text} · ${money.format(cost)}`
   }
@@ -843,7 +856,7 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
       next = { status: "assistant responding" }
     }
 
-    const usage = formatUsage(
+const usage = formatUsage(
       info.tokens,
       input.limits[modelKey(info.providerID, info.modelID)],
       typeof info.cost === "number" ? info.cost : undefined,
@@ -852,6 +865,18 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
       next = {
         ...next,
         usage,
+      }
+    }
+
+    if (info.tokens && typeof info.id === "string") {
+      const read = info.tokens.cache?.read ?? 0
+      const write = info.tokens.cache?.write ?? 0
+      data.tokens = {
+        input: info.tokens.input ?? 0,
+        output: info.tokens.output ?? 0,
+        cacheRead: read,
+        cacheWrite: write,
+        lastMessageID: info.id,
       }
     }
 

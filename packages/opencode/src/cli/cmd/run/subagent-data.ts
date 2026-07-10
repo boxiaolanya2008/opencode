@@ -76,6 +76,11 @@ export function sameSubagentTab(a: FooterSubagentTab | undefined, b: FooterSubag
     return false
   }
 
+  const tokens = a.tokens?.lastMessageID === b.tokens?.lastMessageID
+    && a.tokens?.input === b.tokens?.input
+    && a.tokens?.output === b.tokens?.output
+    && a.tokens?.cacheRead === b.tokens?.cacheRead
+    && a.tokens?.cacheWrite === b.tokens?.cacheWrite
   return (
     a.sessionID === b.sessionID &&
     a.partID === b.partID &&
@@ -86,6 +91,7 @@ export function sameSubagentTab(a: FooterSubagentTab | undefined, b: FooterSubag
     a.background === b.background &&
     a.title === b.title &&
     a.toolCalls === b.toolCalls &&
+    tokens &&
     a.lastUpdatedAt === b.lastUpdatedAt
   )
 }
@@ -308,7 +314,7 @@ function taskStatus(part: ToolPart): FooterSubagentTab["status"] {
   return "running"
 }
 
-function taskTab(part: ToolPart, sessionID: string): FooterSubagentTab {
+function taskTab(part: ToolPart, sessionID: string, detail?: DetailState): FooterSubagentTab {
   const label = Locale.titlecase(text(part.state.input.subagent_type) ?? "general")
   const description = text(part.state.input.description) ?? stateTitle(part) ?? inputLabel(part.state.input) ?? ""
 
@@ -322,6 +328,7 @@ function taskTab(part: ToolPart, sessionID: string): FooterSubagentTab {
     background: metadata(part, "background") === true,
     title: stateTitle(part),
     toolCalls: num(metadata(part, "toolcalls")) ?? num(metadata(part, "toolCalls")) ?? num(metadata(part, "calls")),
+    tokens: detail ? { ...detail.data.tokens } : undefined,
     lastUpdatedAt: stateUpdatedAt(part),
   }
 }
@@ -344,14 +351,13 @@ function syncTaskTab(data: SubagentData, part: ToolPart, children?: Set<string>)
     return false
   }
 
-  const next = taskTab(part, sessionID)
+  const detail = ensureDetail(data, sessionID)
+  const next = taskTab(part, sessionID, detail)
   if (sameSubagentTab(data.tabs.get(sessionID), next)) {
-    ensureDetail(data, sessionID)
     return false
   }
 
   data.tabs.set(sessionID, next)
-  ensureDetail(data, sessionID)
   return true
 }
 
@@ -554,6 +560,25 @@ function compactDetail(detail: DetailState) {
   detail.data = next
 }
 
+function tokensForEvent(event: Event): {
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
+  lastMessageID?: string
+} | undefined {
+  if (event.type !== "message.updated") return undefined
+  const info = event.properties.info
+  if (info.role !== "assistant" || !info.tokens || typeof info.id !== "string") return undefined
+  return {
+    input: info.tokens.input ?? 0,
+    output: info.tokens.output ?? 0,
+    cacheRead: info.tokens.cache?.read ?? 0,
+    cacheWrite: info.tokens.cache?.write ?? 0,
+    lastMessageID: info.id,
+  }
+}
+
 function applyChildEvent(input: {
   detail: DetailState
   event: Event
@@ -570,6 +595,8 @@ function applyChildEvent(input: {
   })
   const changed = appendCommits(input.detail, out.commits)
   compactDetail(input.detail)
+  const tokens = tokensForEvent(input.event)
+  if (tokens) input.detail.data.tokens = tokens
 
   return changed || queueChanged(input.detail.data, before)
 }
@@ -798,14 +825,24 @@ export function reduceSubagentData(input: {
 }) {
   const event = input.event
 
-  if (event.type === "message.part.updated") {
+if (event.type === "message.part.updated") {
     const part = event.properties.part
     if (part.sessionID === input.sessionID) {
       if (part.type !== "tool") {
         return false
       }
 
-      return syncTaskTab(input.data, part)
+const changed = syncTaskTab(input.data, part)
+      const sid = taskSessionID(part)
+      if (sid) {
+        const detail = input.data.details.get(sid)
+        const tokens = detail?.data.tokens
+        if (tokens && detail) {
+          const tab = input.data.tabs.get(detail.sessionID)
+          if (tab) input.data.tabs.set(detail.sessionID, { ...tab, tokens: { ...tokens } })
+        }
+      }
+      return changed
     }
   }
 
